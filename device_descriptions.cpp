@@ -315,6 +315,35 @@ DeviceDescriptions::DeviceDescriptions(QObject *parent) :
 
         d_ptr2->parseFunctions.push_back(fn);
     }
+    {
+        DDF_FunctionDescriptor fn;
+        fn.name = "tuya:special";
+        fn.description = "Generic function to parse custom tuya attributes and commands.";
+
+        DDF_FunctionDescriptor::Parameter param;
+
+        param.name = "Datapoint ID";
+        param.key = "dpid";
+        param.description = "The datapint to parse7";
+        param.dataType = DataTypeUInt16;
+        param.defaultValue = 0;
+        param.isOptional = 0;
+        param.isHexString = 1;
+        param.supportsArray = 0;
+        fn.parameters.push_back(param);
+
+        param.name = "Expression";
+        param.key = "eval";
+        param.description = "Javascript expression to transform the raw value.";
+        param.dataType = DataTypeString;
+        param.defaultValue = {};
+        param.isOptional = 0;
+        param.isHexString = 0;
+        param.supportsArray = 0;
+        fn.parameters.push_back(param);
+
+        d_ptr2->parseFunctions.push_back(fn);
+    }
 }
 
 /*! Destructor. */

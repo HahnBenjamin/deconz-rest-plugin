@@ -14,6 +14,17 @@
 #include "ias_zone.h"
 #include "resource.h"
 #include "zcl/zcl.h"
+#include "tuya.h"
+
+enum DP_Types : short
+{
+    raw = 0x00, // epresents a DP of raw data type (nBytes)
+    boolean =  0x01,
+    value = 0x02, //represents a DP of integer data type, in big-endian format (4 bytes)
+    t_string = 0x03, //sting (nbytes)
+    t_enum = 0x04, // Represents a DP of enum data type, ranging from 0 to 255.
+    bitmap = 0x05 // Represents a DP of fault data type. Data greater than one byte is transmitted in big-endian format. 1, 2, or 4 bytes 
+};
 
 enum DA_Constants
 {
@@ -569,6 +580,80 @@ deCONZ::ZclAttribute parseXiaomiZclTag(const quint8 rtag, const deCONZ::ZclFrame
     return result;
 }
 
+bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndication& ind, const deCONZ::ZclFrame& zclFrame, const QVariant& parseParameters)
+{
+    bool result = false;
+    if (zclFrame.isDefaultResponse())
+    {
+        return false;
+    }
+
+    DBG_Printf(DBG_INFO_L2, "Tuya debug Request : Address 0x%016llX, Endpoint 0x%02X, Command 0x%02X, Payload %s\n", ind.srcAddress().ext(), ind.srcEndpoint(), zclFrame.commandId(), qPrintable(zclFrame.payload().toHex()));
+
+    if (zclFrame.commandId() == TUYA_REQUEST)
+    {
+        // 0x00 : TUYA_REQUEST > Used to send command, so not used here
+    }
+    else if (zclFrame.commandId() == TUYA_REPORTING || zclFrame.commandId() == TUYA_QUERY || zclFrame.commandId() == TUYA_STATUS_SEARCH)
+    {
+        // 0x01 : TUYA_REPORTING > Used to inform of changes in its state.
+        // 0x02 : TUYA_QUERY > Send after receiving a 0x00 command.
+        // 0x06 : TUYA_STATUS_SEARCH > kind of reporting.
+
+        if (zclFrame.payload().size() < 7)
+        {
+            DBG_Printf(DBG_INFO, "Tuya : Payload too short\n");
+            return false;
+        }
+
+        QDataStream stream(zclFrame.payload());
+        stream.setByteOrder(QDataStream::LittleEndian);
+
+        // "dp" field describes the action/message of a command frame and was composed by a type and an identifier
+        // Composed by a type (dp_type) and an identifier (dp_identifier), the identifier is device dependant.
+        // "transid" is just a "counter", a response will have the same transif than the command.
+        // "Status" and "fn" are always 0
+        // More explanations at top of file
+
+        if (!item->parseFunction()) {}
+
+        quint16 sequenceNumber;
+
+
+        quint8 dp_id;
+        quint8 dp_type;
+        quint16 length = 0;
+
+        stream >> sequenceNumber;
+
+        while (!stream.atEnd())
+        {
+
+            stream >> dp_id;
+            stream >> dp_type;
+
+            stream >> length;
+            quint8* data = new quint8[length];
+
+            //data larger than 1 byte is transmitted big-endian
+
+            for (; length > 0; length--)
+            {
+                stream >> data[length - 1];
+            }
+
+            //Convertion octet string to decimal value
+            stream >> length;
+
+            DBG_Printf(DBG_INFO, "Tuya debug 4 : Address 0x%016llX Payload %s\n", ind.srcAddress().ext(), qPrintable(zclFrame.payload().toHex()));
+            //DBG_Printf(DBG_INFO, "Tuya debug 5 : Status: %u Transid: %u Dp: %u (0x%02X,0x%02X) Fn: %u Data %d\n", status, transid, dp, dp_type, dp_identifier, fn, data);
+
+
+        };
+    }
+            return result;
+}
+
 /*! A generic function to parse ZCL values from Xiaomi special report commands.
     The item->parseParameters() is expected to be an object (given in the device description file).
 
@@ -1013,9 +1098,10 @@ ParseFunction_t DA_GetParseFunction(const QVariant &params)
 {
     ParseFunction_t result = nullptr;
 
-    const std::array<ParseFunction, 4> functions =
+    const std::array<ParseFunction, 5> functions =
     {
         ParseFunction("zcl", 1, parseZclAttribute),
+        ParseFunction("tuya:special", 1, parseTuyaSpecial),
         ParseFunction("xiaomi:special", 1, parseXiaomiSpecial),
         ParseFunction("ias:zonestatus", 1, parseIasZoneNotificationAndStatus),
         ParseFunction("numtostr", 1, parseNumericToString)
