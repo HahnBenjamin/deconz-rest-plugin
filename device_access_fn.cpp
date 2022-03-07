@@ -651,7 +651,39 @@ bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndi
 
         };
     }
-            return result;
+    
+    const auto map = parseParameters.toMap();
+
+     bool ok;
+    const auto datapointId = variantToUint(map.value("dpid"), UINT8_MAX, &ok);
+    const auto expr = map.value("eval").toString();
+    
+    if (!ok || expr.isEmpty())
+    {
+        return result;
+    }
+
+    // deCONZ::ZclAttribute attribute(param.attributes[0], dpid , QLatin1String(""), deCONZ::ZclReadWrite, true);
+
+if (!expr.isEmpty())
+        {
+            DeviceJs engine;
+            engine.setResource(r);
+            engine.setItem(item);
+
+            if (engine.evaluate(expr) == JsEvalResult::Ok)
+            {
+                const auto res = engine.result();
+                DBG_Printf(DBG_INFO, "expression: %s --> %s\n", qPrintable(expr), qPrintable(res.toString()));
+                // attribute.setValue(res);
+            }
+            else
+            {
+                DBG_Printf(DBG_INFO, "failed to evaluate expression for %s/%s: %s, err: %s\n", qPrintable(r->item(RAttrUniqueId)->toString()), item->descriptor().suffix, qPrintable(expr), qPrintable(engine.errorString()));
+                return result;
+            }
+        }
+    return result;
 }
 
 /*! A generic function to parse ZCL values from Xiaomi special report commands.

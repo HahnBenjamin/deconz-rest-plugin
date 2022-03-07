@@ -325,10 +325,10 @@ DeviceDescriptions::DeviceDescriptions(QObject *parent) :
         param.name = "Datapoint ID";
         param.key = "dpid";
         param.description = "The datapint to parse7";
-        param.dataType = DataTypeUInt16;
+        param.dataType = DataTypeUInt8;
         param.defaultValue = 0;
         param.isOptional = 0;
-        param.isHexString = 1;
+        param.isHexString = 0;
         param.supportsArray = 0;
         fn.parameters.push_back(param);
 
