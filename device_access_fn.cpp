@@ -15,30 +15,31 @@
 #include "resource.h"
 #include "zcl/zcl.h"
 #include "tuya.h"
+#include "de_web_plugin_private.h"
 
-enum DP_Types : short
+enum DP_Types : quint8
 {
     raw = 0x00, // epresents a DP of raw data type (nBytes)
-    boolean =  0x01,
-    value = 0x02, //represents a DP of integer data type, in big-endian format (4 bytes)
-    t_string = 0x03, //sting (nbytes)
-    t_enum = 0x04, // Represents a DP of enum data type, ranging from 0 to 255.
-    bitmap = 0x05 // Represents a DP of fault data type. Data greater than one byte is transmitted in big-endian format. 1, 2, or 4 bytes 
+    boolean = 0x01,
+    value = 0x02,    // represents a DP of integer data type, in big-endian format (4 bytes)
+    t_string = 0x03, // sting (nbytes)
+    t_enum = 0x04,   // Represents a DP of enum data type, ranging from 0 to 255.
+    bitmap = 0x05    // Represents a DP of fault data type. Data greater than one byte is transmitted in big-endian format. 1, 2, or 4 bytes
 };
 
 enum DA_Constants
 {
     BroadcastEndpoint = 255, //! Accept incoming commands from any endpoint.
-    AutoEndpoint = 0 //! Use src/dst endpoint of the related Resource (uniqueid).
+    AutoEndpoint = 0         //! Use src/dst endpoint of the related Resource (uniqueid).
 };
 
 struct ParseFunction
 {
-    ParseFunction(const QString &_name, const int _arity, ParseFunction_t _fn) :
-        name(_name),
-        arity(_arity),
-        fn(_fn)
-    { }
+    ParseFunction(const QString &_name, const int _arity, ParseFunction_t _fn) : name(_name),
+                                                                                 arity(_arity),
+                                                                                 fn(_fn)
+    {
+    }
     QString name;
     int arity = 0; // number of parameters given by the device description file
     ParseFunction_t fn = nullptr;
@@ -46,11 +47,11 @@ struct ParseFunction
 
 struct ReadFunction
 {
-    ReadFunction(const QString &_name, const int _arity, ReadFunction_t _fn) :
-        name(_name),
-        arity(_arity),
-        fn(_fn)
-    { }
+    ReadFunction(const QString &_name, const int _arity, ReadFunction_t _fn) : name(_name),
+                                                                               arity(_arity),
+                                                                               fn(_fn)
+    {
+    }
     QString name;
     int arity = 0; // number of parameters given by the device description file
     ReadFunction_t fn = nullptr;
@@ -58,11 +59,11 @@ struct ReadFunction
 
 struct WriteFunction
 {
-    WriteFunction(const QString &_name, const int _arity, WriteFunction_t _fn) :
-        name(_name),
-        arity(_arity),
-        fn(_fn)
-    { }
+    WriteFunction(const QString &_name, const int _arity, WriteFunction_t _fn) : name(_name),
+                                                                                 arity(_arity),
+                                                                                 fn(_fn)
+    {
+    }
     QString name;
     int arity = 0; // number of parameters given by the device description file
     WriteFunction_t fn = nullptr;
@@ -123,7 +124,8 @@ static ZCL_Param getZclParam(const QVariantMap &param)
     const auto attr = param[QLatin1String("at")]; // optional
 
     if (!ok)
-    { }
+    {
+    }
     else if (attr.type() == QVariant::String)
     {
         result.attributes[result.attributeCount] = variantToUint(attr, UINT16_MAX, &ok);
@@ -278,7 +280,15 @@ bool parseNumericToString(Resource *r, ResourceItem *item, const deCONZ::ApsData
     ResourceItem *srcItem = nullptr;
     const auto map = parseParameters.toMap();
 
-    enum Op { OpNone, OpLessThan, OpLessEqual, OpEqual, OpGreaterThan, OpGreaterEqual };
+    enum Op
+    {
+        OpNone,
+        OpLessThan,
+        OpLessEqual,
+        OpEqual,
+        OpGreaterThan,
+        OpGreaterEqual
+    };
     Op op = OpNone;
 
     if (!item->parseFunction()) // init on first call
@@ -316,11 +326,26 @@ bool parseNumericToString(Resource *r, ResourceItem *item, const deCONZ::ApsData
     {
         const auto opString = map[QLatin1String("op")].toString();
 
-        if      (opString == QLatin1String("le")) { op = OpLessEqual; }
-        else if (opString == QLatin1String("lt")) { op = OpLessThan; }
-        else if (opString == QLatin1String("eq")) { op = OpEqual; }
-        else if (opString == QLatin1String("ge")) { op = OpGreaterEqual; }
-        else if (opString == QLatin1String("gt")) { op = OpGreaterThan; }
+        if (opString == QLatin1String("le"))
+        {
+            op = OpLessEqual;
+        }
+        else if (opString == QLatin1String("lt"))
+        {
+            op = OpLessThan;
+        }
+        else if (opString == QLatin1String("eq"))
+        {
+            op = OpEqual;
+        }
+        else if (opString == QLatin1String("ge"))
+        {
+            op = OpGreaterEqual;
+        }
+        else if (opString == QLatin1String("gt"))
+        {
+            op = OpGreaterThan;
+        }
         else
         {
             return result;
@@ -336,7 +361,7 @@ bool parseNumericToString(Resource *r, ResourceItem *item, const deCONZ::ApsData
     }
 
     auto i = std::find_if(to.cbegin(), to.cend(), [num, op](const QVariant &var)
-    {
+                          {
         if (var.type() == QVariant::Double)
         {
             if (op == OpLessEqual)    { return num <= var.toInt(); }
@@ -345,8 +370,7 @@ bool parseNumericToString(Resource *r, ResourceItem *item, const deCONZ::ApsData
             if (op == OpGreaterEqual) { return num >= var.toInt(); }
             if (op == OpGreaterThan)  { return num > var.toInt();  }
         }
-        return false;
-    });
+        return false; });
 
     if (i != to.cend())
     {
@@ -530,7 +554,7 @@ deCONZ::ZclAttribute parseXiaomiZclTag(const quint8 rtag, const deCONZ::ZclFrame
         }
         else if (a == 0xff02 && dataType == 0x4c /*deCONZ::ZclStruct*/)
         {
-//            attrId = a;
+            //            attrId = a;
         }
         else if (a == 0x00f7 && dataType == deCONZ::ZclOctedString)
         {
@@ -580,9 +604,10 @@ deCONZ::ZclAttribute parseXiaomiZclTag(const quint8 rtag, const deCONZ::ZclFrame
     return result;
 }
 
-bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndication& ind, const deCONZ::ZclFrame& zclFrame, const QVariant& parseParameters)
+bool parseTuyaSpecial(Resource *r, ResourceItem *item, const deCONZ::ApsDataIndication &ind, const deCONZ::ZclFrame &zclFrame, const QVariant &parseParameters)
 {
     bool result = false;
+
     if (zclFrame.isDefaultResponse())
     {
         return false;
@@ -593,6 +618,7 @@ bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndi
     if (zclFrame.commandId() == TUYA_REQUEST)
     {
         // 0x00 : TUYA_REQUEST > Used to send command, so not used here
+        return false;
     }
     else if (zclFrame.commandId() == TUYA_REPORTING || zclFrame.commandId() == TUYA_QUERY || zclFrame.commandId() == TUYA_STATUS_SEARCH)
     {
@@ -606,8 +632,15 @@ bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndi
             return false;
         }
 
+        DBG_Printf(DBG_INFO, "Tuya : Payload size %d\n", zclFrame.payload().size());
+
+        const auto map = parseParameters.toMap();
+
+        bool ok;
+        const auto datapointId = variantToUint(map.value("dpid"), UINT8_MAX, &ok);
+
         QDataStream stream(zclFrame.payload());
-        stream.setByteOrder(QDataStream::LittleEndian);
+        stream.setByteOrder(QDataStream::BigEndian);
 
         // "dp" field describes the action/message of a command frame and was composed by a type and an identifier
         // Composed by a type (dp_type) and an identifier (dp_identifier), the identifier is device dependant.
@@ -615,75 +648,208 @@ bool parseTuyaSpecial(Resource* r, ResourceItem* item, const deCONZ::ApsDataIndi
         // "Status" and "fn" are always 0
         // More explanations at top of file
 
-        if (!item->parseFunction()) {}
+        if (!item->parseFunction())
+        {
+        }
 
         quint16 sequenceNumber;
 
-
         quint8 dp_id;
         quint8 dp_type;
-        quint16 length = 0;
+        quint16 length;
+        quint8 *dataBuf;
+        deCONZ::ZclAttribute attribute;
 
         stream >> sequenceNumber;
-
-        while (!stream.atEnd())
+        bool match = false;
+        while (!match && !stream.atEnd())
         {
 
             stream >> dp_id;
             stream >> dp_type;
 
             stream >> length;
-            quint8* data = new quint8[length];
+            dataBuf = new quint8[length];
 
-            //data larger than 1 byte is transmitted big-endian
+            DBG_Printf(DBG_INFO, "Tuya debug data length %u (0x%02X)\n", length, length);
 
-            for (; length > 0; length--)
+            for (int i = 0; i < length; i++)
             {
-                stream >> data[length - 1];
+                stream >> dataBuf[i];
             }
-
-            //Convertion octet string to decimal value
-            stream >> length;
 
             DBG_Printf(DBG_INFO, "Tuya debug 4 : Address 0x%016llX Payload %s\n", ind.srcAddress().ext(), qPrintable(zclFrame.payload().toHex()));
-            //DBG_Printf(DBG_INFO, "Tuya debug 5 : Status: %u Transid: %u Dp: %u (0x%02X,0x%02X) Fn: %u Data %d\n", status, transid, dp, dp_type, dp_identifier, fn, data);
+            DBG_Printf(DBG_INFO, "Tuya debug 5 : sequence: %u dp_id: %u dp_type: %u length: %u Data %d\n", sequenceNumber, dp_id, dp_type, length, dataBuf);
 
-
+            if (datapointId != dp_id)
+            {
+                continue;
+            }
+            match = true;
+            break;
         };
-    }
-    
-    const auto map = parseParameters.toMap();
 
-     bool ok;
-    const auto datapointId = variantToUint(map.value("dpid"), UINT8_MAX, &ok);
-    const auto expr = map.value("eval").toString();
-    
-    if (!ok || expr.isEmpty())
-    {
-        return result;
-    }
+        if (!match)
+        {
+            return false;
+        }
 
-    // deCONZ::ZclAttribute attribute(param.attributes[0], dpid , QLatin1String(""), deCONZ::ZclReadWrite, true);
+        switch (dp_type)
+        {
+        case DP_TYPE_RAW:{
+            //TO DO
+            break;
+        }
+        case DP_TYPE_VALUE:
+        {
+            int value = int((unsigned char)(dataBuf[0]) << 24 |
+                            (unsigned char)(dataBuf[1]) << 16 |
+                            (unsigned char)(dataBuf[2]) << 8 |
+                            (unsigned char)(dataBuf[3]));
+            DBG_Printf(DBG_INFO, "##### Tuya debug DP:, %u value %i\n", dp_id, value);
+            attribute.setDataType(deCONZ::Zcl32BitInt);
+            attribute.setValue((qint64)value);
+            break;
+        }
+        case DP_TYPE_ENUM:
+        {
+            DBG_Printf(DBG_INFO, "##### Tuya debug DP: %u enum  value %u\n", dp_id, dataBuf[0]);
+            attribute.setDataType(deCONZ::Zcl8BitEnum);
+            attribute.setEnumerationId(dataBuf[0]);
+            break;
+        }
+        case DP_TYPE_BOOL:
+        {
+            DBG_Printf(DBG_INFO, "##### Tuya debug DP: %u bool %s\n", dp_id, dataBuf[0] ? "true" : "false");
+            attribute.setDataType(deCONZ::ZclBoolean);
+            attribute.setValue((dataBuf[0] == 0x01) ? true : false);
+
+            break;
+        }
+        case DP_TYPE_STRING:
+        {
+            char str[((int)length) + 1];
+            // Copy contents
+            memcpy(str, dataBuf, length);
+            // Append NULL terminator
+            str[((int)length)] = '\0';
+            DBG_Printf(DBG_INFO, "##### Tuya debug DP: %u string value %s\n", dp_id, str);
+            attribute.setDataType(deCONZ::ZclCharacterString);
+            attribute.setValue((dataBuf[0] == 0x01) ? true : false);
+            break;
+        }
+        // Bitmap
+        case DP_TYPE_FAULT: 
+        {
+            quint64 value;
+            switch (length) {
+                case 1:
+        {
+            attribute.setDataType(deCONZ::Zcl8BitBitMap);
+                    value = quint64(dataBuf[0]);
+        break;
+        }
+        case 2:
+        {
+            attribute.setDataType(deCONZ::Zcl16BitBitMap);
+            value = quint64((unsigned char)(dataBuf[0]) << 8 | (unsigned char)(dataBuf[1]));
+            break;
+        }
+        case 4:
+        {
+            attribute.setDataType(deCONZ::Zcl32BitBitMap);
+            value = quint64((unsigned char)(dataBuf[0]) << 24 |
+                            (unsigned char)(dataBuf[1]) << 16 |
+                            (unsigned char)(dataBuf[2]) << 8 |
+                            (unsigned char)(dataBuf[3]));
+                            break;
+        }
+ 
+
+        default:
+            break;
+        }
+
+    }
+default:
+    break;
+}
+
+const auto expr = map.value("eval").toString();
+if (!ok || expr.isEmpty())
+{
+    return result;
+}
 
 if (!expr.isEmpty())
-        {
-            DeviceJs engine;
-            engine.setResource(r);
-            engine.setItem(item);
+{
+    DeviceJs engine;
+    engine.setResource(r);
+    engine.setItem(item);
+    engine.setZclAttribute(attribute);
 
-            if (engine.evaluate(expr) == JsEvalResult::Ok)
-            {
-                const auto res = engine.result();
-                DBG_Printf(DBG_INFO, "expression: %s --> %s\n", qPrintable(expr), qPrintable(res.toString()));
-                // attribute.setValue(res);
-            }
-            else
-            {
-                DBG_Printf(DBG_INFO, "failed to evaluate expression for %s/%s: %s, err: %s\n", qPrintable(r->item(RAttrUniqueId)->toString()), item->descriptor().suffix, qPrintable(expr), qPrintable(engine.errorString()));
-                return result;
-            }
-        }
-    return result;
+    if (engine.evaluate(expr) == JsEvalResult::Ok)
+    {
+        const auto res = engine.result();
+        DBG_Printf(DBG_INFO, "expression: %s --> %s\n", qPrintable(expr), qPrintable(res.toString()));
+        // attribute.setValue(res);
+        return true;
+    }
+    else
+    {
+        DBG_Printf(DBG_INFO, "failed to evaluate expression for %s/%s: %s, err: %s\n", qPrintable(r->item(RAttrUniqueId)->toString()), item->descriptor().suffix, qPrintable(expr), qPrintable(engine.errorString()));
+        return result;
+    }
+}
+}
+else if (zclFrame.commandId() == TUYA_TIME_SYNCHRONISATION)
+{
+    DBG_Printf(DBG_INFO, "Tuya debug 1 : Time sync request\n");
+
+    QDataStream stream(zclFrame.payload());
+    stream.setByteOrder(QDataStream::BigEndian);
+
+    quint16 sequenceNumber;
+    stream >> sequenceNumber;
+
+    /* ZCL Payload also contains the Time on the deivce but this is not of interest in this case
+
+    quint32 standardTimeStamp;
+    stream >> standardTimeStamp;
+
+    quint32 localTimeStamp;
+    stream >> localTimeStamp;
+    */
+
+    quint32 timeNow = 0xFFFFFFFF;       // id 0x0000 Time
+    qint32 timeZone = 0xFFFFFFFF;       // id 0x0002 TimeZone
+    quint32 timeDstStart = 0xFFFFFFFF;  // id 0x0003 DstStart
+    quint32 timeDstEnd = 0xFFFFFFFF;    // id 0x0004 DstEnd
+    qint32 timeDstShift = 0xFFFFFFFF;   // id 0x0005 DstShift
+    quint32 timeStdTime = 0xFFFFFFFF;   // id 0x0006 StandardTime
+    quint32 timeLocalTime = 0xFFFFFFFF; // id 0x0007 LocalTime
+
+    getTime(&timeNow, &timeZone, &timeDstStart, &timeDstEnd, &timeDstShift, &timeStdTime, &timeLocalTime, UNIX_EPOCH);
+
+    QByteArray data;
+    QDataStream stream2(&data, QIODevice::WriteOnly);
+    stream2.setByteOrder(QDataStream::BigEndian);
+
+    stream2 << sequenceNumber;
+
+    // stream2.setByteOrder(QDataStream::BigEndian);
+
+    // Add UTC time
+    stream2 << timeNow;
+    // Add local time
+    stream2 << timeLocalTime;
+
+    DeRestPluginPrivate *app = DeRestPluginPrivate::instance();
+    app->sendTuyaCommand(ind, TUYA_TIME_SYNCHRONISATION, data);
+
+    return true;
+}
+return result;
 }
 
 /*! A generic function to parse ZCL values from Xiaomi special report commands.
@@ -727,7 +893,7 @@ bool parseXiaomiSpecial(Resource *r, ResourceItem *item, const deCONZ::ApsDataIn
 
         param.endpoint = BroadcastEndpoint; // default
         param.clusterId = 0x0000;
-        
+
         if (ind.clusterId() == 0xfcc0)
         {
             param.clusterId = 0xfcc0;
@@ -812,13 +978,12 @@ bool parseIasZoneNotificationAndStatus(Resource *r, ResourceItem *item, const de
         return result;
     }
 
-    if (zclFrame.isClusterCommand())  // is IAS Zone status notification?
+    if (zclFrame.isClusterCommand()) // is IAS Zone status notification?
     {
         if (zclFrame.commandId() != CMD_STATUS_CHANGE_NOTIFICATION)
         {
             return result;
         }
-
     }
     else if (zclFrame.commandId() != deCONZ::ZclReadAttributesResponseId && zclFrame.commandId() != deCONZ::ZclReportAttributesId) // is read or report?
     {
@@ -897,8 +1062,14 @@ bool parseIasZoneNotificationAndStatus(Resource *r, ResourceItem *item, const de
             {
                 QStringList alarmMask = map["mask"].toString().split(',', QString::SkipEmptyParts);
 
-                if (alarmMask.contains(QLatin1String("alarm1"))) { mask |= STATUS_ALARM1; }
-                if (alarmMask.contains(QLatin1String("alarm2"))) { mask |= STATUS_ALARM2; }
+                if (alarmMask.contains(QLatin1String("alarm1")))
+                {
+                    mask |= STATUS_ALARM1;
+                }
+                if (alarmMask.contains(QLatin1String("alarm2")))
+                {
+                    mask |= STATUS_ALARM2;
+                }
             }
         }
         else if (suffix == RStateTampered)
@@ -915,7 +1086,7 @@ bool parseIasZoneNotificationAndStatus(Resource *r, ResourceItem *item, const de
         }
 
         item->setValue((zoneStatus & mask) != 0);
-        item->setLastZclReport(deCONZ::steadyTimeRef().ref);    // Treat as report
+        item->setLastZclReport(deCONZ::steadyTimeRef().ref); // Treat as report
         result = true;
     }
 
@@ -1131,13 +1302,12 @@ ParseFunction_t DA_GetParseFunction(const QVariant &params)
     ParseFunction_t result = nullptr;
 
     const std::array<ParseFunction, 5> functions =
-    {
-        ParseFunction("zcl", 1, parseZclAttribute),
-        ParseFunction("tuya:special", 1, parseTuyaSpecial),
-        ParseFunction("xiaomi:special", 1, parseXiaomiSpecial),
-        ParseFunction("ias:zonestatus", 1, parseIasZoneNotificationAndStatus),
-        ParseFunction("numtostr", 1, parseNumericToString)
-    };
+        {
+            ParseFunction("zcl", 1, parseZclAttribute),
+            ParseFunction("tuya:special", 1, parseTuyaSpecial),
+            ParseFunction("xiaomi:special", 1, parseXiaomiSpecial),
+            ParseFunction("ias:zonestatus", 1, parseIasZoneNotificationAndStatus),
+            ParseFunction("numtostr", 1, parseNumericToString)};
 
     QString fnName;
 
@@ -1145,7 +1315,8 @@ ParseFunction_t DA_GetParseFunction(const QVariant &params)
     {
         const auto params1 = params.toMap();
         if (params1.isEmpty())
-        {  }
+        {
+        }
         else if (params1.contains("fn"))
         {
             fnName = params1["fn"].toString();
@@ -1173,9 +1344,8 @@ ReadFunction_t DA_GetReadFunction(const QVariant &params)
     ReadFunction_t result = nullptr;
 
     const std::array<ReadFunction, 1> functions =
-    {
-        ReadFunction("zcl", 1, readZclAttribute)
-    };
+        {
+            ReadFunction("zcl", 1, readZclAttribute)};
 
     QString fnName;
 
@@ -1183,7 +1353,8 @@ ReadFunction_t DA_GetReadFunction(const QVariant &params)
     {
         const auto params1 = params.toMap();
         if (params1.isEmpty())
-        {  }
+        {
+        }
         else if (params1.contains("fn"))
         {
             fnName = params1["fn"].toString();
@@ -1211,9 +1382,8 @@ WriteFunction_t DA_GetWriteFunction(const QVariant &params)
     WriteFunction_t result = nullptr;
 
     const std::array<WriteFunction, 1> functions =
-    {
-        WriteFunction("zcl", 1, writeZclAttribute)
-    };
+        {
+            WriteFunction("zcl", 1, writeZclAttribute)};
 
     QString fnName;
 
@@ -1221,7 +1391,8 @@ WriteFunction_t DA_GetWriteFunction(const QVariant &params)
     {
         const auto params1 = params.toMap();
         if (params1.isEmpty())
-        {  }
+        {
+        }
         else if (params1.contains("fn"))
         {
             fnName = params1["fn"].toString();
